@@ -1,0 +1,25 @@
+[project]
+name = "accurx-task"
+version = "0.1.0"
+description = "ELT pipeline joining GP consultation requests with historical weather data"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "duckdb>=0.9.0",
+  "pandas>=2.0.0",
+  "requests>=2.28.0",
+  "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+run-pipeline = "run_pipeline:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-mock>=3.12.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
