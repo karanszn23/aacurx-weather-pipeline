@@ -109,16 +109,17 @@ def _ensure_tables(con):
     con.execute(
         """
         CREATE TABLE IF NOT EXISTS raw.consultations (
-            id BIGINT,
-            city VARCHAR,
-            timestamp TIMESTAMP,
-            request_date DATE,
-            request_type VARCHAR,
+            id BIGINT PRIMARY KEY,
+            city VARCHAR NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            request_date DATE NOT NULL,
+            request_type VARCHAR NOT NULL,
             _source_file VARCHAR,
             loaded_at TIMESTAMP
         )
         """
     )
+    con.execute("ALTER TABLE raw.consultations ADD COLUMN IF NOT EXISTS loaded_at TIMESTAMP")
     con.execute(
         """
         CREATE TABLE IF NOT EXISTS raw.consultation_rejections (
@@ -215,7 +216,9 @@ def _insert_consultations(con, records):
         con.register("incoming_consultations_df", df)
         con.execute(
             """
-            INSERT INTO raw.consultations
+            INSERT INTO raw.consultations (
+                id, city, timestamp, request_date, request_type, _source_file, loaded_at
+            )
             SELECT
                 i.id,
                 i.city,

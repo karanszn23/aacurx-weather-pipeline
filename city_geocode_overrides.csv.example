@@ -1,0 +1,2 @@
+city,latitude,longitude,geocode_name,admin1,country,country_code,population
+Example Town,51.5000,-0.1200,Example Town,England,United Kingdom,GB,10000

@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import pandas as pd
 import duckdb
@@ -6,6 +7,7 @@ from config import (
     GEOCODE_API,
     DB_PATH,
     GEOCODE_COUNTRY_CODE,
+    CITY_GEOCODE_OVERRIDES_PATH,
     GEOCODE_REQUEST_DELAY_SECONDS,
 )
 from http_utils import request_json_with_retries
@@ -13,6 +15,16 @@ from http_utils import request_json_with_retries
 logger = logging.getLogger(__name__)
 
 UK_PRIORITY_CODES = {"GB", "GG", "JE", "IM"}
+OVERRIDE_COLUMNS = {
+    "city",
+    "latitude",
+    "longitude",
+    "geocode_name",
+    "admin1",
+    "country",
+    "country_code",
+    "population",
+}
 
 
 def _ensure_tables(con):
@@ -55,6 +67,38 @@ def _select_best_hit(hits):
     if not hits:
         return None
     return sorted(hits, key=_hit_rank)[0]
+
+
+def _load_geocode_overrides(path):
+    if not path or not os.path.exists(path):
+        return {}
+
+    df = pd.read_csv(path)
+    missing = {"city", "latitude", "longitude"} - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"Geocode override file {path} missing required columns: {sorted(missing)}"
+        )
+
+    for column in OVERRIDE_COLUMNS - set(df.columns):
+        df[column] = None
+
+    overrides = {}
+    for _, row in df.iterrows():
+        city = str(row["city"]).strip()
+        if not city:
+            continue
+        overrides[city] = {
+            "city": city,
+            "latitude": float(row["latitude"]),
+            "longitude": float(row["longitude"]),
+            "geocode_name": row["geocode_name"] if pd.notna(row["geocode_name"]) else city,
+            "admin1": row["admin1"] if pd.notna(row["admin1"]) else None,
+            "country": row["country"] if pd.notna(row["country"]) else None,
+            "country_code": row["country_code"] if pd.notna(row["country_code"]) else None,
+            "population": int(row["population"]) if pd.notna(row["population"]) else None,
+        }
+    return overrides
 
 
 def geocode(city_name):
@@ -109,10 +153,11 @@ def run(full_refresh=False):
             .tolist()
         )
         remaining = [city for city in cities if city not in cached]
+        overrides = _load_geocode_overrides(CITY_GEOCODE_OVERRIDES_PATH)
 
         logger.info(
-            "Geocode cache: %d/%d cities. Geocoding %d new cities...",
-            len(cached), len(cities), len(remaining),
+            "Geocode cache: %d/%d cities. Resolving %d new cities (%d overrides available)...",
+            len(cached), len(cities), len(remaining), len(overrides),
         )
         results, failed = [], []
 
@@ -120,7 +165,7 @@ def run(full_refresh=False):
             if i > 0 and i % 100 == 0:
                 logger.info("Progress: %d/%d cities (%d failed)", i, len(remaining), len(failed))
             try:
-                coords = geocode(city)
+                coords = overrides.get(city) or geocode(city)
                 if coords:
                     results.append(coords)
                 else:

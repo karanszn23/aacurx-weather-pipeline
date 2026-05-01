@@ -35,6 +35,9 @@ GEOCODE_API = os.getenv("GEOCODE_API", "https://geocoding-api.open-meteo.com/v1/
 TIMEZONE = os.getenv("PIPELINE_TIMEZONE", "Europe/London")
 
 GEOCODE_COUNTRY_CODE = os.getenv("GEOCODE_COUNTRY_CODE", "GB")
+CITY_GEOCODE_OVERRIDES_PATH = os.getenv(
+    "CITY_GEOCODE_OVERRIDES_PATH", "city_geocode_overrides.csv"
+)
 GEOCODE_REQUEST_DELAY_SECONDS = _get_env_float("GEOCODE_REQUEST_DELAY_SECONDS", 0.2)
 WEATHER_REQUEST_DELAY_SECONDS = _get_env_float("WEATHER_REQUEST_DELAY_SECONDS", 1.0)
 

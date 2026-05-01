@@ -1,5 +1,5 @@
 import pytest
-from geocode_cities import _hit_rank, _select_best_hit
+from geocode_cities import _hit_rank, _load_geocode_overrides, _select_best_hit
 
 
 # ---------------------------------------------------------------------------
@@ -74,3 +74,34 @@ def test_select_best_hit_prefers_je_over_non_uk():
     au = _make_hit("AU", 2_000_000)
     result = _select_best_hit([au, je])
     assert result is je
+
+
+# ---------------------------------------------------------------------------
+# _load_geocode_overrides
+# ---------------------------------------------------------------------------
+
+def test_load_geocode_overrides_missing_file_returns_empty(tmp_path):
+    assert _load_geocode_overrides(str(tmp_path / "missing.csv")) == {}
+
+
+def test_load_geocode_overrides_reads_manual_city_match(tmp_path):
+    overrides_path = tmp_path / "overrides.csv"
+    overrides_path.write_text(
+        "city,latitude,longitude,geocode_name,admin1,country,country_code,population\n"
+        "Springfield,53.1,-1.2,Springfield,England,United Kingdom,GB,12345\n",
+        encoding="utf-8",
+    )
+
+    overrides = _load_geocode_overrides(str(overrides_path))
+
+    assert overrides["Springfield"]["latitude"] == 53.1
+    assert overrides["Springfield"]["longitude"] == -1.2
+    assert overrides["Springfield"]["country_code"] == "GB"
+
+
+def test_load_geocode_overrides_requires_city_lat_lon(tmp_path):
+    overrides_path = tmp_path / "bad.csv"
+    overrides_path.write_text("city,latitude\nLeeds,53.8\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="missing required columns"):
+        _load_geocode_overrides(str(overrides_path))

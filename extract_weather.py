@@ -37,7 +37,7 @@ def _ensure_tables(con):
     con.execute(
         """
         CREATE TABLE IF NOT EXISTS raw.weather (
-            date DATE,
+            date DATE NOT NULL,
             temp_max DOUBLE,
             temp_min DOUBLE,
             temp_mean DOUBLE,
@@ -45,8 +45,9 @@ def _ensure_tables(con):
             rain_mm DOUBLE,
             wind_max_kmh DOUBLE,
             weather_code INTEGER,
-            city VARCHAR,
-            is_poor_weather BOOLEAN
+            city VARCHAR NOT NULL,
+            is_poor_weather BOOLEAN,
+            PRIMARY KEY (city, date)
         )
         """
     )
